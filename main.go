@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 	"os"
 	"os/signal"
@@ -9,6 +9,7 @@ import (
 	"rockets-backend/transport"
 	"rockets-backend/transport/http_transport"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -23,29 +24,14 @@ func main() {
 	svc := service.NewService(logger)
 	endpoints := transport.MakeEndpoints(svc)
 
-	// create a error channel, which can be used to stop the application in proper manner
-	// otherwise port will not get free in local
-	errChan := make(chan error)
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errChan <- fmt.Errorf("%s", <-c)
-		_ = level.Info(logger).Log("Message", "stopping the rockets backend", "ErrChan", <-errChan)
-	}()
+	h := http_transport.NewHttpService(endpoints)
+	server := &http.Server{
+		Addr:    httpAddr,
+		Handler: h,
+	}
 
-	// Start the server listener
-	go func() {
-		h := http_transport.NewHttpService(endpoints)
-		_ = level.Info(logger).Log("Transport", "HTTP", "Addr", httpAddr)
-		server := &http.Server{
-			Addr:    httpAddr,
-			Handler: h,
-		}
-
-		errChan <- server.ListenAndServe()
-	}()
-
-	_ = level.Error(logger).Log("Error", <-errChan)
+	startServer(server, logger)
+	gracefulShutdown(server, logger)
 }
 
 func getLogger(logLevel string) log.Logger {
@@ -67,4 +53,33 @@ func getLogger(logLevel string) log.Logger {
 		"Caller", log.DefaultCaller,
 	)
 	return logger
+}
+
+func startServer(server *http.Server, logger log.Logger) {
+	go func() {
+		_ = level.Info(logger).Log("Transport", "HTTP", "Addr", server.Addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			_ = level.Error(logger).Log("Error", "server failed to start", "err", err)
+		}
+	}()
+}
+
+func gracefulShutdown(server *http.Server, logger log.Logger) {
+	// Wait for interrupt signal to gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	<-c
+
+	_ = level.Info(logger).Log("Message", "shutting down server gracefully")
+
+	// Create a deadline for shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := server.Shutdown(ctx); err != nil {
+		_ = level.Error(logger).Log("Error", "server forced to shutdown", "err", err)
+	} else {
+		_ = level.Info(logger).Log("Message", "server exited gracefully")
+	}
 }
