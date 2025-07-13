@@ -16,7 +16,7 @@ func NewHttpService(endpoints transport.Endpoints) http.Handler {
 	r.Methods("GET").Path("/health").Handler(goKitHttp.NewServer(
 		endpoints.HealthCheck,
 		decodeRequest,
-		endcodeResponse,
+		encodeResponse,
 	))
 
 	return r
@@ -27,7 +27,7 @@ func decodeRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	return nil, nil
 }
 
-func endcodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Add("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(response)
 }
