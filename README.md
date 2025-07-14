@@ -2,21 +2,6 @@
 
 A Go-based backend service that tracks rocket state changes through message processing and provides REST APIs for querying rocket data.
 
-## Features
-
-- **Asynchronous Message Processing**: Fast message ingestion (~1-5ms) with background processing. For a larger scale
-  when dealing with multiple instances  instead of the go-routines(workers) we can integrate a external queuing solution
-- **Message Deduplication**: Handles duplicate messages using unique constraint on channel + message number  
-- **Message Ordering**: Processes out-of-order messages correctly using message numbers
-- **State Tracking**: Maintains current rocket state (speed, mission, status, etc.)
-- **Event Status Tracking**: Monitor processing status of individual messages
-- **REST API**: Clean endpoints for rocket queries and event status
-- **PostgreSQL**: Robust persistence with JSONB support for message payloads
-- **Request ID Tracking**: Full request tracing across all endpoints and logs
-- **Structured Logging**: Request ID included in all logs for debugging
-- **Standardized Responses**: Consistent `{request_id, data, error}` response format
-- **Docker Support**: Complete containerization with PostgreSQL
-
 ## Quick Start
 
 **Prerequisites:**
@@ -42,7 +27,6 @@ The service will be available at `http://localhost:8088` with PostgreSQL automat
 
 **Prerequisites:**
 - Docker and Docker Compose
-- Go 1.24+
 
 **Run integration tests:**
 ```bash
@@ -265,30 +249,29 @@ Run the provided rockets test program:
 ### Log Format
 All logs include request ID for traceability:
 ```
-level=info request_id=abc-123 msg="processed message" type=RocketLaunched channel=xyz messageNumber=1
+level=info requestId=abc-123 msg="event processed successfully" eventId=123 type=RocketLaunched channel=xyz messageNumber=1
 ```
 
-## Architecture
+## Design Descisions
 
 ### **Asynchronous Message Processing**
-- **Fast Ingestion**: POST /messages stores events immediately (~1-5ms response)
-- **Background Processing**: Worker polls and processes events asynchronously
-- **Status Tracking**: Full visibility into processing state and errors
+- POST /messages stores events immediately (~1-5ms response)
+- Set of workers polls and processes events asynchronously in background
 
-### **Core Components**
+
+### **Scalability**
+- The main reason for the separation of consumption and processing is to be able to scale separately later
+- In a dstributed environment, we could use a queing solution like kafka, rabbitMQ [Improvement]
+- Workers process events in configurable batches (default: 10 events)
+- Configurable worker count (default: 2 workers)
+- Configurable worker polling (default: 1 second)
+- Failed events marked with status and can create retry workflows if needed [Improvement]
+- Events are persisted before processing begins
+
+## Technology stack
 - **Go-kit Framework**: Transport layer, endpoints, and service separation
 - **PostgreSQL**: Robust database with UUID and JSONB support
-- **Background Workers**: Configurable concurrent event processors
-- **Request Tracking**: Full request ID lifecycle management
-- **Structured Responses**: Consistent API response format
 
-### **Scalability Features**
-- **Independent Scaling**: Ingestion and processing scale separately
-- **Batch Processing**: Workers process events in configurable batches (default: 10 events)
-- **Concurrent Workers**: Configurable worker count (default: 2 workers)
-- **Error Resilience**: Failed events marked for retry with error details
-- **Minimized Message Loss**: Events persisted before processing begins
-- **Polling Interval**: Configurable worker polling (default: 1 second)
 
 ## Database Schema
 
