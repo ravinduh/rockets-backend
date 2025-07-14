@@ -46,7 +46,7 @@ func (s service) IngestMessage(ctx context.Context, msg models.IncomingMessage) 
 	// Convert message to JSON for storage
 	messageData, err := json.Marshal(msg.Message)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to marshal message", "error", err)
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to marshal message", "error", err)
 		return nil, fmt.Errorf("failed to marshal message data: %w", err)
 	}
 
@@ -62,11 +62,11 @@ func (s service) IngestMessage(ctx context.Context, msg models.IncomingMessage) 
 	// Store event in database
 	err = s.repository.CreateRocketEvent(event)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to store event", "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "error", err)
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to store event", "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "error", err)
 		return nil, fmt.Errorf("failed to store rocket event: %w", err)
 	}
 
-	_ = level.Info(s.logger).Log("request_id", requestID, "msg", "message ingested", "event_id", event.ID, "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "type", msg.Metadata.MessageType)
+	_ = level.Info(s.logger).Log("requestId", requestID, "msg", "message ingested", "eventId", event.ID, "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "type", msg.Metadata.MessageType)
 
 	return event, nil
 }
@@ -78,8 +78,8 @@ func (s service) ProcessEvent(ctx context.Context, event *models.RocketEvent) er
 	// Mark event as processing
 	err := s.repository.UpdateEventStatus(event.ID, models.EventStatusProcessing, nil)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to mark event as processing",
-			"event_id", event.ID, "error", err)
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to mark event as processing",
+			"eventId", event.ID, "error", err)
 		return fmt.Errorf("failed to mark event as processing: %w", err)
 	}
 
@@ -93,8 +93,8 @@ func (s service) ProcessEvent(ctx context.Context, event *models.RocketEvent) er
 
 	// Check message ordering - only process if message number is higher
 	if rocket != nil && event.MessageNumber <= rocket.LastMessageNumber {
-		_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "ignoring out-of-order event",
-			"event_id", event.ID, "channel", event.Channel, "messageNumber", event.MessageNumber,
+		_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "ignoring out-of-order event",
+			"eventId", event.ID, "channel", event.Channel, "messageNumber", event.MessageNumber,
 			"lastProcessed", rocket.LastMessageNumber)
 		s.repository.MarkEventProcessed(event.ID)
 		return nil
@@ -155,12 +155,12 @@ func (s service) ProcessEvent(ctx context.Context, event *models.RocketEvent) er
 	// Mark event as processed
 	err = s.repository.MarkEventProcessed(event.ID)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to mark event as processed",
-			"event_id", event.ID, "error", err)
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to mark event as processed",
+			"eventId", event.ID, "error", err)
 		return fmt.Errorf("failed to mark event as processed: %w", err)
 	}
 
-	_ = level.Info(s.logger).Log("request_id", requestID, "msg", "event processed successfully", "event_id", event.ID,
+	_ = level.Info(s.logger).Log("requestId", requestID, "msg", "event processed successfully", "eventId", event.ID,
 		"type", event.MessageType, "channel", event.Channel, "messageNumber", event.MessageNumber)
 	return nil
 }
@@ -168,16 +168,16 @@ func (s service) ProcessEvent(ctx context.Context, event *models.RocketEvent) er
 // GetEventStatus returns the current status of an event
 func (s service) GetEventStatus(ctx context.Context, eventID int64) (*models.RocketEvent, error) {
 	requestID := pkgContext.GetRequestID(ctx)
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "getting event status", "event_id", eventID)
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "getting event status", "eventId", eventID)
 
 	event, err := s.repository.GetRocketEvent(eventID)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to get event", "event_id", eventID,
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to get event", "eventId", eventID,
 			"error", err)
 		return nil, err
 	}
 
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "event status retrieved", "event_id", eventID,
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "event status retrieved", "eventId", eventID,
 		"found", event != nil)
 	return event, nil
 }
@@ -246,32 +246,32 @@ func (s service) processRocketMissionChangedFromData(rocket *models.Rocket, mess
 
 func (s service) GetRocket(ctx context.Context, id models.UUID) (*models.Rocket, error) {
 	requestID := pkgContext.GetRequestID(ctx)
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "getting rocket", "rocket_id", id)
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "getting rocket", "rocketId", id)
 
 	rocket, err := s.repository.GetRocket(id)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to get rocket", "rocket_id", id,
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to get rocket", "rocketId", id,
 			"error", err)
 		return nil, err
 	}
 
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "rocket retrieved", "rocket_id", id,
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "rocket retrieved", "rocketId", id,
 		"found", rocket != nil)
 	return rocket, nil
 }
 
 func (s service) GetAllRockets(ctx context.Context, sortBy string) ([]models.Rocket, error) {
 	requestID := pkgContext.GetRequestID(ctx)
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "getting all rockets", "sortBy", sortBy)
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "getting all rockets", "sortBy", sortBy)
 
 	rockets, err := s.repository.GetAllRockets(sortBy)
 	if err != nil {
-		_ = level.Error(s.logger).Log("request_id", requestID, "msg", "failed to get rockets", "sortBy", sortBy,
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to get rockets", "sortBy", sortBy,
 			"error", err)
 		return nil, err
 	}
 
-	_ = level.Debug(s.logger).Log("request_id", requestID, "msg", "rockets retrieved", "count", len(rockets),
+	_ = level.Debug(s.logger).Log("requestId", requestID, "msg", "rockets retrieved", "count", len(rockets),
 		"sortBy", sortBy)
 	return rockets, nil
 }
