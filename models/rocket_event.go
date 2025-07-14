@@ -26,7 +26,3 @@ const (
 	EventStatusFailed     = "failed"
 )
 
-// EventProcessingRequest represents a request to process an event
-type EventProcessingRequest struct {
-	Event *RocketEvent `json:"event"`
-}

@@ -62,11 +62,13 @@ func (s service) IngestMessage(ctx context.Context, msg models.IncomingMessage) 
 	// Store event in database
 	err = s.repository.CreateRocketEvent(event)
 	if err != nil {
-		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to store event", "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "error", err)
+		_ = level.Error(s.logger).Log("requestId", requestID, "msg", "failed to store event",
+			"channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "error", err)
 		return nil, fmt.Errorf("failed to store rocket event: %w", err)
 	}
 
-	_ = level.Info(s.logger).Log("requestId", requestID, "msg", "message ingested", "eventId", event.ID, "channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "type", msg.Metadata.MessageType)
+	_ = level.Info(s.logger).Log("requestId", requestID, "msg", "message ingested", "eventId", event.ID,
+		"channel", msg.Metadata.Channel, "messageNumber", msg.Metadata.MessageNumber, "type", msg.Metadata.MessageType)
 
 	return event, nil
 }

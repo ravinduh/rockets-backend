@@ -17,13 +17,5 @@ type Rocket struct {
 	LastMessageNumber int       `json:"-" db:"last_message_number"`
 }
 
-// ProcessedMessage tracks which messages have been processed to avoid duplicates
-type ProcessedMessage struct {
-	Channel     UUID      `db:"channel"`
-	MessageNumber int     `db:"message_number"`
-	MessageType string    `db:"message_type"`
-	ProcessedAt time.Time `db:"processed_at"`
-}
-
 // UUID type alias for rocket IDs
 type UUID = string
