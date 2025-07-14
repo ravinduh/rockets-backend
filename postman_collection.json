@@ -1,0 +1,684 @@
+{
+	"info": {
+		"_postman_id": "rockets-backend-api",
+		"name": "Rockets Backend API",
+		"description": "Complete API collection for the Rockets Backend Service - tracks rocket state changes through message processing and provides REST APIs for querying rocket data.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "rockets-backend"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8088",
+			"type": "string"
+		},
+		{
+			"key": "rocketChannel",
+			"value": "{{$randomUUID}}",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has request_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('request_id');",
+							"});",
+							"",
+							"pm.test(\"Health status is OK\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.status).to.eql('OK');",
+							"    pm.expect(jsonData.data.service).to.eql('rockets-backend');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "health-check-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/health",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check the health status of the rockets backend service"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Rocket Launched Message",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has request_id and event_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('request_id');",
+							"    pm.expect(jsonData.data).to.have.property('event_id');",
+							"    pm.expect(jsonData.data.status).to.eql('ingested');",
+							"});",
+							"",
+							"// Save event_id for later use",
+							"if (pm.response.json().data && pm.response.json().data.event_id) {",
+							"    pm.collectionVariables.set('eventId', pm.response.json().data.event_id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Generate a new rocket channel for this test run",
+							"pm.collectionVariables.set('rocketChannel', pm.variables.replaceIn('{{$randomUUID}}'));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "rocket-launch-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"metadata\": {\n    \"channel\": \"{{rocketChannel}}\",\n    \"messageNumber\": 1,\n    \"messageTime\": \"{{$isoTimestamp}}\",\n    \"messageType\": \"RocketLaunched\"\n  },\n  \"message\": {\n    \"type\": \"Falcon-9\",\n    \"launchSpeed\": 500,\n    \"mission\": \"ARTEMIS\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Process a RocketLaunched message to create a new rocket"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Rocket Speed Increased Message",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Message ingested successfully\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data.status).to.eql('ingested');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "speed-increase-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"metadata\": {\n    \"channel\": \"{{rocketChannel}}\",\n    \"messageNumber\": 2,\n    \"messageTime\": \"{{$isoTimestamp}}\",\n    \"messageType\": \"RocketSpeedIncreased\"\n  },\n  \"message\": {\n    \"by\": 300\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Process a RocketSpeedIncreased message to increase rocket speed"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Rocket Speed Decreased Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "speed-decrease-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"metadata\": {\n    \"channel\": \"{{rocketChannel}}\",\n    \"messageNumber\": 3,\n    \"messageTime\": \"{{$isoTimestamp}}\",\n    \"messageType\": \"RocketSpeedDecreased\"\n  },\n  \"message\": {\n    \"by\": 150\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Process a RocketSpeedDecreased message to decrease rocket speed"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Rocket Mission Changed Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "mission-change-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"metadata\": {\n    \"channel\": \"{{rocketChannel}}\",\n    \"messageNumber\": 4,\n    \"messageTime\": \"{{$isoTimestamp}}\",\n    \"messageType\": \"RocketMissionChanged\"\n  },\n  \"message\": {\n    \"newMission\": \"MARS-EXPLORER\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Process a RocketMissionChanged message to change rocket mission"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Rocket Exploded Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "rocket-explosion-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"metadata\": {\n    \"channel\": \"{{rocketChannel}}\",\n    \"messageNumber\": 5,\n    \"messageTime\": \"{{$isoTimestamp}}\",\n    \"messageType\": \"RocketExploded\"\n  },\n  \"message\": {\n    \"reason\": \"engine malfunction\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Process a RocketExploded message to mark rocket as exploded"
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Rockets",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has request_id and data array\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('request_id');",
+							"    pm.expect(jsonData.data).to.be.an('array');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-all-rockets-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/rockets",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"rockets"
+					]
+				},
+				"description": "Get all rockets in the system"
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Rockets (Sorted by Speed)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-rockets-sorted-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/rockets?sortBy=speed",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"rockets"
+					],
+					"query": [
+						{
+							"key": "sortBy",
+							"value": "speed"
+						}
+					]
+				},
+				"description": "Get all rockets sorted by current speed"
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Rockets (Sorted by Type)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-rockets-by-type-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/rockets?sortBy=type",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"rockets"
+					],
+					"query": [
+						{
+							"key": "sortBy",
+							"value": "type"
+						}
+					]
+				},
+				"description": "Get all rockets sorted by rocket type"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Specific Rocket",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 or 404\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+							"});",
+							"",
+							"if (pm.response.code === 200) {",
+							"    pm.test(\"Response has rocket data\", function () {",
+							"        var jsonData = pm.response.json();",
+							"        pm.expect(jsonData.data).to.have.property('id');",
+							"        pm.expect(jsonData.data).to.have.property('type');",
+							"        pm.expect(jsonData.data).to.have.property('currentSpeed');",
+							"        pm.expect(jsonData.data).to.have.property('mission');",
+							"        pm.expect(jsonData.data).to.have.property('status');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-rocket-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/rockets/{{rocketChannel}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"rockets",
+						"{{rocketChannel}}"
+					]
+				},
+				"description": "Get a specific rocket by its channel ID"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Non-Existent Rocket",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"Error message is correct\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.eql('rocket not found');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-missing-rocket-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/rockets/non-existent-rocket-id",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"rockets",
+						"non-existent-rocket-id"
+					]
+				},
+				"description": "Test getting a non-existent rocket (should return 404)"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Event Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 or 404\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+							"});",
+							"",
+							"if (pm.response.code === 200) {",
+							"    pm.test(\"Response has event data\", function () {",
+							"        var jsonData = pm.response.json();",
+							"        pm.expect(jsonData.data).to.have.property('id');",
+							"        pm.expect(jsonData.data).to.have.property('channel');",
+							"        pm.expect(jsonData.data).to.have.property('message_number');",
+							"        pm.expect(jsonData.data).to.have.property('message_type');",
+							"        pm.expect(jsonData.data).to.have.property('status');",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-event-status-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/events/{{eventId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"events",
+						"{{eventId}}"
+					]
+				},
+				"description": "Get the processing status of a specific event"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Non-Existent Event",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"Error message is correct\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.eql('event not found');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Request-Id",
+						"value": "get-missing-event-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/events/999999",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"events",
+						"999999"
+					]
+				},
+				"description": "Test getting a non-existent event (should return 404)"
+			},
+			"response": []
+		},
+		{
+			"name": "Process Invalid Message",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"Error message is present\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('error');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Request-Id",
+						"value": "invalid-message-{{$randomUUID}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"invalid\": \"json structure\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"messages"
+					]
+				},
+				"description": "Test processing an invalid message structure (should return 400)"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"// Add any global setup here"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test(\"Response time is less than 5000ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test(\"Response has proper structure\", function () {",
+					"    try {",
+					"        var jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('request_id');",
+					"    } catch (e) {",
+					"        // Skip JSON tests for non-JSON responses",
+					"    }",
+					"});"
+				]
+			}
+		}
+	]
+}
