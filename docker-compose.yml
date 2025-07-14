@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: rockets-postgres
+    environment:
+      POSTGRES_DB: rockets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rockets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rockets-network
+
+  rockets-backend:
+    build: .
+    container_name: rockets-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: rockets
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rockets-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  rockets-network:
+    driver: bridge
