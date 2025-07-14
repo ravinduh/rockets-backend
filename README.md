@@ -50,6 +50,9 @@ The service will be available at `http://localhost:8088` with PostgreSQL automat
 
 ## API Response Format
 
+Download postman collection for easier testing:
+[postman collection](./postman_collection.json)
+
 All API responses follow a consistent format:
 
 **Success Response:**
